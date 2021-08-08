@@ -50,4 +50,12 @@ public class Formatter {
 			throw new UncheckedIOException(e);
 		}
 	}
+
+	public static String erase(String source, boolean erase) {
+		if (erase)
+			return source.replaceAll("/\\*--\\?--\\*/.+?/\\*--\\?--\\*/", "");
+
+		return source.replaceAll("/\\*--\\?--\\*/", "");
+	}
+
 }

@@ -66,7 +66,12 @@ public class SQLProxyProcessor extends AbstractProcessor {
 
 					param.put("PACKAGE", packageName.isEmpty() ? "" : ("package " + packageName + ";"));
 					param.put("INTERFACE", className);
-					param.put("METHODS", buildMetodsPart(infos));
+
+					String methodPart = buildMetodsPart(infos);
+
+					template = Formatter.erase(template, methodPart.isEmpty());
+
+					param.put("METHODS", methodPart);
 
 					template = Formatter.format(template, param);
 

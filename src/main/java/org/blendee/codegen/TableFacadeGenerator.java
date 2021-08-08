@@ -459,7 +459,7 @@ public class TableFacadeGenerator {
 				importPart.add(buildImportPart(Many.class));
 			}
 
-			myTemplate = erase(template, relationships.isEmpty());
+			myTemplate = Formatter.erase(template, relationships.isEmpty());
 
 			foreignKeysPart = String.join("", relationships);
 			rowRelationshipPart = String.join("", rowRelationships);
@@ -637,13 +637,6 @@ public class TableFacadeGenerator {
 			Pattern.MULTILINE + Pattern.DOTALL).matcher(source);
 		matcher.find();
 		return new String[] { matcher.group(1), matcher.replaceAll("") };
-	}
-
-	private static String erase(String source, boolean erase) {
-		if (erase)
-			return source.replaceAll("/\\*--\\?--\\*/.+?/\\*--\\?--\\*/", "");
-
-		return source.replaceAll("/\\*--\\?--\\*/", "");
 	}
 
 	/**
