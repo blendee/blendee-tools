@@ -1,2 +1,2 @@
-# blendee-tools
+# Blendee tools
 Blendee Tools
