@@ -19,10 +19,18 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.NoType;
+import javax.lang.model.type.PrimitiveType;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.SimpleElementVisitor8;
+import javax.lang.model.util.SimpleTypeVisitor8;
 import javax.tools.Diagnostic.Kind;
 
 import org.blendee.codegen.Formatter;
+import org.blendee.jdbc.BResultSet;
+import org.blendee.jdbc.DataTypeConverter;
 import org.blendee.util.SQLProxyBuilder;
 import org.blendee.util.annotation.SQLProxy;
 
@@ -32,6 +40,23 @@ import org.blendee.util.annotation.SQLProxy;
 @SupportedAnnotationTypes("org.blendee.util.annotation.SQLProxy")
 @SupportedSourceVersion(SourceVersion.RELEASE_8)
 public class SQLProxyProcessor extends AbstractProcessor {
+
+	private static class TypeVisitor extends SimpleElementVisitor8<TypeElement, Void> {
+
+		@Override
+		protected TypeElement defaultAction(Element e, Void p) {
+			throw new ProcessException();
+		}
+
+		@Override
+		public TypeElement visitType(TypeElement e, Void p) {
+			return e;
+		}
+	}
+
+	private static final TypeVisitor typeVisitor = new TypeVisitor();
+
+	private static final ThreadLocal<Boolean> hasError = ThreadLocal.withInitial(() -> false);
 
 	@Override
 	public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
@@ -50,10 +75,16 @@ public class SQLProxyProcessor extends AbstractProcessor {
 
 					List<MethodInfo> infos = new LinkedList<>();
 
+					hasError.set(false);
+
 					MethodVisitor visitor = new MethodVisitor();
 					e.getEnclosedElements().forEach(enc -> {
 						enc.accept(visitor, infos);
 					});
+
+					if (hasError.get()) {
+						return;
+					}
 
 					String template = Formatter.readTemplate(SQLProxyMetadataTemplate.class, "UTF-8");
 					template = Formatter.convertToTemplate(template);
@@ -99,7 +130,7 @@ public class SQLProxyProcessor extends AbstractProcessor {
 	}
 
 	private String className(String packageName, Element element) {
-		TypeElement type = element.accept(new TypeVisitor(), null);
+		TypeElement type = element.accept(typeVisitor, null);
 		String name = type.getQualifiedName().toString();
 
 		// . はインナークラスの区切りにも使用されるので、純粋にパッケージ名のみを取り除く
@@ -133,17 +164,88 @@ public class SQLProxyProcessor extends AbstractProcessor {
 		super.processingEnv.getMessager().printMessage(Kind.ERROR, message, e);
 	}
 
-	private class TypeVisitor extends SimpleElementVisitor8<TypeElement, Void> {
+	private class ReturnTypeChecker extends SimpleTypeVisitor8<Void, ExecutableElement> {
 
 		@Override
-		protected TypeElement defaultAction(Element e, Void p) {
-			throw new ProcessException();
+		protected Void defaultAction(TypeMirror e, ExecutableElement p) {
+			error("cannot use return type [" + e + "]", p);
+			hasError.set(true);
+			return DEFAULT_VALUE;
 		}
 
 		@Override
-		public TypeElement visitType(TypeElement e, Void p) {
-			return e;
+		public Void visitPrimitive(PrimitiveType t, ExecutableElement p) {
+			switch (t.getKind()) {
+			case INT:
+			case BOOLEAN:
+				return DEFAULT_VALUE;
+			default:
+				return defaultAction(t, p);
+			}
 		}
+
+		@Override
+		public Void visitDeclared(DeclaredType t, ExecutableElement p) {
+			TypeElement type = t.asElement().accept(typeVisitor, null);
+
+			if (sameClass(type, BResultSet.class)) return DEFAULT_VALUE;
+			if (sameClass(type, SQLProxy.ResultSet.class)) return DEFAULT_VALUE;
+
+			return defaultAction(t, p);
+		}
+
+		@Override
+		public Void visitNoType(NoType t, ExecutableElement p) {
+			// void
+			return DEFAULT_VALUE;
+		}
+	}
+
+	private class ParameterTypeChecker extends SimpleTypeVisitor8<Void, VariableElement> {
+
+		@Override
+		protected Void defaultAction(TypeMirror e, VariableElement p) {
+			error("cannot use parameter type [" + e + "]", p);
+			hasError.set(true);
+			return DEFAULT_VALUE;
+		}
+
+		@Override
+		public Void visitPrimitive(PrimitiveType t, VariableElement p) {
+			switch (t.getKind()) {
+			case BOOLEAN:
+			case BYTE:
+			case DOUBLE:
+			case FLOAT:
+			case INT:
+			case LONG:
+				return DEFAULT_VALUE;
+			default:
+				return defaultAction(t, p);
+			}
+		}
+
+		@Override
+		public Void visitDeclared(DeclaredType t, VariableElement p) {
+			TypeElement type = t.asElement().accept(typeVisitor, null);
+
+			if (sameClass(type, DataTypeConverter.BIG_DECIMAL_TYPE)) return DEFAULT_VALUE;
+			if (sameClass(type, DataTypeConverter.BINARY_STREAM_TYPE)) return DEFAULT_VALUE;
+			if (sameClass(type, DataTypeConverter.BLOB_TYPE)) return DEFAULT_VALUE;
+			if (sameClass(type, DataTypeConverter.BYTE_ARRAY_TYPE)) return DEFAULT_VALUE;
+			if (sameClass(type, DataTypeConverter.CHARACTER_STREAM_TYPE)) return DEFAULT_VALUE;
+			if (sameClass(type, DataTypeConverter.CLOB_TYPE)) return DEFAULT_VALUE;
+			if (sameClass(type, DataTypeConverter.OBJECT_TYPE)) return DEFAULT_VALUE;
+			if (sameClass(type, DataTypeConverter.STRING_TYPE)) return DEFAULT_VALUE;
+			if (sameClass(type, DataTypeConverter.TIMESTAMP_TYPE)) return DEFAULT_VALUE;
+			if (sameClass(type, DataTypeConverter.UUID_TYPE)) return DEFAULT_VALUE;
+
+			return defaultAction(t, p);
+		}
+	}
+
+	private static boolean sameClass(TypeElement type, Class<?> clazz) {
+		return type.getQualifiedName().toString().equals(clazz.getCanonicalName());
 	}
 
 	private class MethodVisitor extends SimpleElementVisitor8<Void, List<MethodInfo>> {
@@ -155,10 +257,16 @@ public class SQLProxyProcessor extends AbstractProcessor {
 				throw new ProcessException();
 			}
 
+			e.getReturnType().accept(new ReturnTypeChecker(), e);
+
 			MethodInfo info = new MethodInfo();
+
+			ParameterTypeChecker checker = new ParameterTypeChecker();
 
 			info.name = e.getSimpleName().toString();
 			e.getParameters().forEach(parameter -> {
+				parameter.asType().accept(checker, parameter);
+
 				info.parameterNames.add(parameter.getSimpleName().toString());
 			});
 
