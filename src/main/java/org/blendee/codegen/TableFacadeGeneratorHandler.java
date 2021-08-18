@@ -37,21 +37,21 @@ public abstract class TableFacadeGeneratorHandler {
 	protected abstract Path getOutputRoot();
 
 	public void execute(TableFacadeGenerator generator) throws IOException {
-		RelationshipFactory factory = RelationshipFactory.getInstance();
+		var factory = RelationshipFactory.getInstance();
 
 		while (tables.size() > 0) {
 			//popの代わり
-			TablePath path = tables.stream().findFirst().get();
+			var path = tables.stream().findFirst().get();
 			tables.remove(path);
 
 			start(path);
 			try {
-				Relationship relationship = factory.getInstance(path);
+				var relationship = factory.getInstance(path);
 
-				String newSource = format(generator.build(relationship));
+				var newSource = format(generator.build(relationship));
 
 				if (exists()) {
-					String oldSource = loadSource();
+					var oldSource = loadSource();
 
 					if (oldSource.equals(newSource)) {
 						infoSkip();
@@ -77,8 +77,8 @@ public abstract class TableFacadeGeneratorHandler {
 	}
 
 	private void collect(Set<TablePath> tables, Relationship relation) {
-		for (Relationship child : relation.getRelationships()) {
-			TablePath childPath = child.getTablePath();
+		for (var child : relation.getRelationships()) {
+			var childPath = child.getTablePath();
 			if (!tables.contains(childPath) && !exists(childPath)) tables.add(childPath);
 		}
 	}

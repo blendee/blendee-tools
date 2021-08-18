@@ -1,11 +1,9 @@
 package org.blendee.codegen;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.text.MessageFormat;
 import java.util.Map;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.blendee.internal.U;
@@ -22,11 +20,11 @@ public class Formatter {
 		Pattern.MULTILINE + Pattern.DOTALL);
 
 	public static String format(String template, Map<String, String> arguments) {
-		StringBuilder buffer = new StringBuilder();
+		var buffer = new StringBuilder();
 
-		Matcher matcher = pattern.matcher(template);
+		var matcher = pattern.matcher(template);
 
-		int start = 0;
+		var start = 0;
 		while (matcher.find()) {
 			buffer.append(template.substring(start, matcher.start()));
 			buffer.append(arguments.get(matcher.group(1)));
@@ -44,7 +42,7 @@ public class Formatter {
 	}
 
 	public static String readTemplate(Class<?> target, String charset) {
-		try (InputStream input = target.getResourceAsStream(target.getSimpleName() + ".java")) {
+		try (var input = target.getResourceAsStream(target.getSimpleName() + ".java")) {
 			return new String(U.readBytes(input), charset);
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);

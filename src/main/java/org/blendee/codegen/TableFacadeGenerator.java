@@ -11,14 +11,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
-import java.util.Set;
 import java.util.logging.Level;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.lang.model.SourceVersion;
@@ -29,10 +26,7 @@ import org.blendee.assist.annotation.ForeignKey;
 import org.blendee.assist.annotation.PrimaryKey;
 import org.blendee.internal.U;
 import org.blendee.jdbc.BlendeeManager;
-import org.blendee.jdbc.ColumnMetadata;
-import org.blendee.jdbc.CrossReference;
 import org.blendee.jdbc.Metadata;
-import org.blendee.jdbc.PrimaryKeyMetadata;
 import org.blendee.jdbc.TableMetadata;
 import org.blendee.jdbc.TablePath;
 import org.blendee.sql.Column;
@@ -97,51 +91,51 @@ public class TableFacadeGenerator {
 	}
 
 	static {
-		String source = Formatter.readTemplate(TableFacadeTemplate.class, "UTF-8");
+		var source = Formatter.readTemplate(TableFacadeTemplate.class, "UTF-8");
 		{
-			String[] result = pickupFromSource(source, "ColumnNamesPart");
+			var result = pickupFromSource(source, "ColumnNamesPart");
 			columnNamesPartTemplate = Formatter.convertToTemplate(result[0]);
 			source = result[1];
 		}
 
 		{
-			String[] result = pickupFromSource(source, "PrimaryKeyPart");
+			var result = pickupFromSource(source, "PrimaryKeyPart");
 			primaryKeyPartTemplate = Formatter.convertToTemplate(result[0]);
 			source = result[1];
 		}
 
 		{
-			String[] result = pickupFromSource(source, "ForeignKeysPart");
+			var result = pickupFromSource(source, "ForeignKeysPart");
 			foreignKeysPartTemplate = Formatter.convertToTemplate(result[0]);
 			source = result[1];
 		}
 
 		{
-			String[] result = pickupFromSource(source, "RowPropertyAccessorPart");
+			var result = pickupFromSource(source, "RowPropertyAccessorPart");
 			rowPropertyAccessorPartTemplate = Formatter.convertToTemplate(result[0]);
 			source = result[1];
 		}
 
 		{
-			String[] result = pickupFromSource(source, "RowRelationshipPart");
+			var result = pickupFromSource(source, "RowRelationshipPart");
 			rowRelationshipPartTemplate = Formatter.convertToTemplate(result[0]);
 			source = result[1];
 		}
 
 		{
-			String[] result = pickupFromSource(source, "ColumnPart1");
+			var result = pickupFromSource(source, "ColumnPart1");
 			relationshipColumnPart1Template = Formatter.convertToTemplate(result[0]);
 			source = result[1];
 		}
 
 		{
-			String[] result = pickupFromSource(source, "ColumnPart2");
+			var result = pickupFromSource(source, "ColumnPart2");
 			relationshipColumnPart2Template = Formatter.convertToTemplate(result[0]);
 			source = result[1];
 		}
 
 		{
-			String[] result = pickupFromSource(source, "TableRelationshipPart");
+			var result = pickupFromSource(source, "TableRelationshipPart");
 			tableRelationshipPartTemplate = Formatter.convertToTemplate(result[0]);
 			source = result[1];
 		}
@@ -195,18 +189,18 @@ public class TableFacadeGenerator {
 	 * @throws IOException ファイル書き込みに失敗した場合
 	 */
 	public void build(String schemaName, File home, Charset srcCharset) throws IOException {
-		File rootPackageDir = getRootPackageDir(home);
+		var rootPackageDir = getRootPackageDir(home);
 		rootPackageDir.mkdirs();
 
-		File packageDir = new File(rootPackageDir, TableFacadePackageRule.care(schemaName));
+		var packageDir = new File(rootPackageDir, TableFacadePackageRule.care(schemaName));
 		packageDir.mkdir();
 
-		TablePath[] tables = metadata.getTables(schemaName);
-		RelationshipFactory factory = RelationshipFactory.getInstance();
-		for (TablePath table : tables) {
-			Relationship relation = factory.getInstance(table);
+		var tables = metadata.getTables(schemaName);
+		var factory = RelationshipFactory.getInstance();
+		for (var table : tables) {
+			var relation = factory.getInstance(table);
 
-			String tableName = relation.getTablePath().getTableName();
+			var tableName = relation.getTablePath().getTableName();
 
 			//使用できない名前の場合
 			if (!isGeneratableTableName(tableName)) {
@@ -238,11 +232,11 @@ public class TableFacadeGenerator {
 	 * @throws IOException ファイル書き込みに失敗した場合
 	 */
 	public void writeDatabaseInfo(Path home) throws IOException {
-		DatabaseInfoWriter info = new DatabaseInfoWriter(home, rootPackageName);
+		var info = new DatabaseInfoWriter(home, rootPackageName);
 
 		info.mkdirs();
 
-		Properties properties = new Properties();
+		var properties = new Properties();
 
 		DatabaseInfo.setStoredIdentifier(properties, metadata.getStoredIdentifier());
 
@@ -266,54 +260,54 @@ public class TableFacadeGenerator {
 		//relation はルートでなければなりません
 		if (!relation.isRoot()) throw new IllegalArgumentException("\"relation\" must be root");
 
-		TablePath target = relation.getTablePath();
+		var target = relation.getTablePath();
 
-		String schemaName = target.getSchemaName();
+		var schemaName = target.getSchemaName();
 
-		String packageName = rootPackageName + "." + TableFacadePackageRule.care(schemaName);
+		var packageName = rootPackageName + "." + TableFacadePackageRule.care(schemaName);
 
-		String tableName = target.getTableName();
+		var tableName = target.getTableName();
 
 		checkName(tableName);
 
-		Set<String> importPart = new LinkedHashSet<>();
+		var importPart = new LinkedHashSet<String>();
 
 		String columnNamesPart, propertyAccessorPart, columnPart1, columnPart2;
 		{
-			List<String> columnNames = new LinkedList<>();
-			List<String> properties = new LinkedList<>();
-			List<String> list1 = new LinkedList<>();
-			List<String> list2 = new LinkedList<>();
+			var columnNames = new LinkedList<String>();
+			var properties = new LinkedList<String>();
+			var list1 = new LinkedList<String>();
+			var list2 = new LinkedList<String>();
 
-			for (Column column : relation.getColumns()) {
-				Class<?> type = column.getType();
+			for (var column : relation.getColumns()) {
+				var type = column.getType();
 
 				String classNameString;
 
 				if (type.isArray()) {
-					Class<?> componentType = convertForNumber(type.getComponentType());
+					var componentType = convertForNumber(type.getComponentType());
 					classNameString = componentType.getName() + "[]";
 				} else {
 					classNameString = convertForNumber(convertPrimitiveClassToWrapperClass(column.getType())).getName();
 				}
 
-				String cast = "";
+				var cast = "";
 
 				if (!classNameString.equals(Object.class.getName())) {
 					cast = "(" + classNameString + ") ";
 				}
 
-				ColumnMetadata columnMetadata = column.getColumnMetadata();
+				var columnMetadata = column.getColumnMetadata();
 
-				boolean notNull = columnMetadata.isNotNull();
+				var notNull = columnMetadata.isNotNull();
 
 				String nullCheck = "", returnPrefix = "", returnSuffix = "", returnType = classNameString;
-				boolean returnOptional = false;
+				var returnOptional = false;
 				if (useNullGuard) {
 					if (notNull || column.isPrimaryKey()) {
 						nullCheck = Objects.class.getSimpleName() + ".requireNonNull(value);" + U.LINE_SEPARATOR + "\t\t\t";
 					} else {
-						String optional = Optional.class.getSimpleName();
+						var optional = Optional.class.getSimpleName();
 						returnPrefix = optional + ".ofNullable(";
 						returnSuffix = ")";
 						returnType = optional + "<" + classNameString + ">";
@@ -321,9 +315,9 @@ public class TableFacadeGenerator {
 					}
 				}
 
-				String columnName = safe(column.getName());
+				var columnName = safe(column.getName());
 
-				Map<String, String> args = new HashMap<>();
+				var args = new HashMap<String, String>();
 				args.put("PACKAGE", packageName);
 				args.put("TABLE", tableName);
 				args.put("METHOD", toUpperCaseFirstLetter(columnName));
@@ -331,7 +325,7 @@ public class TableFacadeGenerator {
 				args.put("TYPE", classNameString);
 				args.put("CAST", cast);
 
-				String commentBase = buildColumnComment(column);
+				var commentBase = buildColumnComment(column);
 				args.put("COMMENT_1", decorate(commentBase, createIndent(1)));
 				args.put("COMMENT_2", decorate(commentBase, createIndent(2)));
 
@@ -348,7 +342,7 @@ public class TableFacadeGenerator {
 				args.put("DECIMAL_DIGITS", Integer.toString(columnMetadata.getDecimalDigits()));
 				args.put("REMARKS", escape(columnMetadata.getRemarks()));
 
-				String defaultValue = columnMetadata.getDefaultValue();
+				var defaultValue = columnMetadata.getDefaultValue();
 				args.put("DEFAULT", defaultValue == null ? null : escape(defaultValue));
 
 				args.put("ORDINAL_POSITION", Integer.toString(columnMetadata.getOrdinalPosition()));
@@ -376,11 +370,11 @@ public class TableFacadeGenerator {
 
 		String primaryKeyPart;
 		{
-			PrimaryKeyMetadata primaryKey = metadata.getPrimaryKeyMetadata(relation.getTablePath());
-			String[] columns = primaryKey.getColumnNames();
+			var primaryKey = metadata.getPrimaryKeyMetadata(relation.getTablePath());
+			var columns = primaryKey.getColumnNames();
 
 			if (columns.length > 0) {
-				Map<String, String> args = new HashMap<>();
+				var args = new HashMap<String, String>();
 				args.put("PK", primaryKey.getName());
 				args.put("PK_COLUMNS", "\"" + String.join("\", \"", primaryKey.getColumnNames()) + "\"");
 
@@ -395,38 +389,38 @@ public class TableFacadeGenerator {
 
 		String foreignKeysPart, rowRelationshipPart, myTemplate, tableRelationshipPart;
 		{
-			Map<String, Boolean> checker = createDuprecateChecker(relation);
+			var checker = createDuprecateChecker(relation);
 
-			List<String> relationships = new LinkedList<>();
-			List<String> rowRelationships = new LinkedList<>();
-			List<String> tableRelationships = new LinkedList<>();
+			var relationships = new LinkedList<String>();
+			var rowRelationships = new LinkedList<String>();
+			var tableRelationships = new LinkedList<String>();
 
-			for (Relationship child : relation.getRelationships()) {
-				CrossReference crossReference = child.getCrossReference();
-				String foreignKey = crossReference.getForeignKeyName();
+			for (var child : relation.getRelationships()) {
+				var crossReference = child.getCrossReference();
+				var foreignKey = crossReference.getForeignKeyName();
 
-				TablePath childPath = child.getTablePath();
-				String childTableName = childPath.getTableName();
+				var childPath = child.getTablePath();
+				var childTableName = childPath.getTableName();
 
-				String methodName = "$" + (checker.get(childTableName) ? childTableName + "$" + foreignKey : childTableName);
+				var methodName = "$" + (checker.get(childTableName) ? childTableName + "$" + foreignKey : childTableName);
 
-				String relationship = "$" + (checker.get(childTableName) ? childTableName + "$" + foreignKey : childTableName);
+				var relationship = "$" + (checker.get(childTableName) ? childTableName + "$" + foreignKey : childTableName);
 
-				String typeParam = Many.class.getSimpleName() + "<" + packageName + "." + tableName + ".Row, M>";
+				var typeParam = Many.class.getSimpleName() + "<" + packageName + "." + tableName + ".Row, M>";
 
-				Map<String, String> args = new HashMap<>();
+				var args = new HashMap<String, String>();
 				args.put("PACKAGE", packageName);
 				args.put("TABLE", tableName);
 				args.put("REFERENCE_PACKAGE", rootPackageName + "." + TableFacadePackageRule.care(childPath.getSchemaName()));
 
-				String reference = childPath.toString();
+				var reference = childPath.toString();
 				args.put("REFERENCE", childTableName);
 				args.put("REFERENCE_PATH", reference);
 				args.put("REFERENCE_FIELD", reference.replaceAll("\\.", "\\$"));
 
 				args.put("FK", foreignKey);
 
-				String[] fkColumns = crossReference.getForeignKeyColumnNames();
+				var fkColumns = crossReference.getForeignKeyColumnNames();
 				args.put("FK_COLUMNS", String.join(", ", fkColumns));
 				args.put("ANNOTATION_FK_COLUMNS", "\"" + String.join("\", \"", fkColumns) + "\"");
 
@@ -466,7 +460,7 @@ public class TableFacadeGenerator {
 			tableRelationshipPart = String.join("", tableRelationships);
 		}
 
-		Map<String, String> args = new HashMap<>();
+		var args = new HashMap<String, String>();
 		args.put("PACKAGE", packageName);
 		args.put("SCHEMA", schemaName);
 		args.put("TABLE", tableName);
@@ -482,7 +476,7 @@ public class TableFacadeGenerator {
 		args.put("COLUMN_PART2", columnPart2);
 		args.put("TABLE_RELATIONSHIP_PART", tableRelationshipPart);
 
-		TableMetadata tableMetadata = metadata.getTableMetadata(target);
+		var tableMetadata = metadata.getTableMetadata(target);
 
 		args.put("TABLE_COMMENT", buildTableComment(tableMetadata, target));
 
@@ -504,7 +498,7 @@ public class TableFacadeGenerator {
 	private static String escape(String string) {
 		if (!U.presents(string)) return "";
 
-		StringBuilder builder = new StringBuilder();
+		var builder = new StringBuilder();
 
 		string.chars().forEach(c -> {
 			switch (c) {
@@ -538,9 +532,9 @@ public class TableFacadeGenerator {
 	}
 
 	private static Map<String, Boolean> createDuprecateChecker(Relationship relation) {
-		Map<String, Boolean> checker = new HashMap<>();
-		for (Relationship child : relation.getRelationships()) {
-			String tableName = child.getTablePath().getTableName();
+		var checker = new HashMap<String, Boolean>();
+		for (var child : relation.getRelationships()) {
+			var tableName = child.getTablePath().getTableName();
 			if (checker.containsKey(tableName)) {
 				checker.put(tableName, true);
 			} else {
@@ -573,7 +567,7 @@ public class TableFacadeGenerator {
 		String body,
 		Charset charset)
 		throws IOException {
-		try (BufferedWriter writer = new BufferedWriter(
+		try (var writer = new BufferedWriter(
 			new OutputStreamWriter(
 				new FileOutputStream(java),
 				charset))) {
@@ -585,7 +579,7 @@ public class TableFacadeGenerator {
 	private static String buildTableComment(
 		TableMetadata tableMetadata,
 		TablePath target) {
-		StringBuilder builder = new StringBuilder();
+		var builder = new StringBuilder();
 		builder.append("schema: " + target.getSchemaName());
 		builder.append(U.LINE_SEPARATOR);
 		builder.append("name: " + tableMetadata.getName());
@@ -599,18 +593,18 @@ public class TableFacadeGenerator {
 	}
 
 	private static String buildColumnComment(Column column) {
-		ColumnMetadata metadata = column.getColumnMetadata();
+		var metadata = column.getColumnMetadata();
 
-		StringBuilder builder = new StringBuilder();
+		var builder = new StringBuilder();
 		builder.append("name: " + metadata.getName());
 		builder.append(U.LINE_SEPARATOR);
 		builder.append("remarks: ");
 		builder.append(U.trim(metadata.getRemarks()));
 		builder.append(U.LINE_SEPARATOR);
 
-		boolean hasDecimalDigits = metadata.hasDecimalDigits() && metadata.getDecimalDigits() != 0 ? true : false;
+		var hasDecimalDigits = metadata.hasDecimalDigits() && metadata.getDecimalDigits() != 0 ? true : false;
 
-		String sizeString = "("
+		var sizeString = "("
 			+ metadata.getSize()
 			+ (hasDecimalDigits ? ", " + metadata.getDecimalDigits() : "")
 			+ ")";
@@ -624,15 +618,15 @@ public class TableFacadeGenerator {
 	}
 
 	private static String decorate(String base, String top) {
-		String prefix = top + " * ";
-		String suffix = "<br>";
-		String[] lines = base.split("[\\r\\n]+");
+		var prefix = top + " * ";
+		var suffix = "<br>";
+		var lines = base.split("[\\r\\n]+");
 		return prefix + String.join(suffix + U.LINE_SEPARATOR + prefix, lines) + suffix;
 	}
 
 	private static String[] pickupFromSource(String source, String key) {
-		String patternBase = "/\\*==" + key + "==\\*/";
-		Matcher matcher = Pattern.compile(
+		var patternBase = "/\\*==" + key + "==\\*/";
+		var matcher = Pattern.compile(
 			patternBase + "(.+?)" + patternBase,
 			Pattern.MULTILINE + Pattern.DOTALL).matcher(source);
 		matcher.find();

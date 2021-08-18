@@ -1,11 +1,9 @@
 package org.blendee.processor;
 
 import java.io.IOException;
-import java.io.Writer;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -38,7 +36,7 @@ import org.blendee.util.annotation.SQLProxy;
  * @author 千葉 哲嗣
  */
 @SupportedAnnotationTypes("org.blendee.util.annotation.SQLProxy")
-@SupportedSourceVersion(SourceVersion.RELEASE_8)
+@SupportedSourceVersion(SourceVersion.RELEASE_11)
 public class SQLProxyProcessor extends AbstractProcessor {
 
 	private static class TypeVisitor extends SimpleElementVisitor8<TypeElement, Void> {
@@ -66,18 +64,18 @@ public class SQLProxyProcessor extends AbstractProcessor {
 		try {
 			annotations.forEach(a -> {
 				roundEnv.getElementsAnnotatedWith(a).forEach(e -> {
-					ElementKind kind = e.getKind();
+					var kind = e.getKind();
 					if (kind != ElementKind.INTERFACE) {
 						error("cannot annotate" + kind.name() + " with " + SQLProxy.class.getSimpleName(), e);
 
 						throw new ProcessException();
 					}
 
-					List<MethodInfo> infos = new LinkedList<>();
+					var infos = new LinkedList<MethodInfo>();
 
 					hasError.set(false);
 
-					MethodVisitor visitor = new MethodVisitor();
+					var visitor = new MethodVisitor();
 					e.getEnclosedElements().forEach(enc -> {
 						enc.accept(visitor, infos);
 					});
@@ -86,19 +84,19 @@ public class SQLProxyProcessor extends AbstractProcessor {
 						return;
 					}
 
-					String template = Formatter.readTemplate(SQLProxyMetadataTemplate.class, "UTF-8");
+					var template = Formatter.readTemplate(SQLProxyMetadataTemplate.class, "UTF-8");
 					template = Formatter.convertToTemplate(template);
 
-					Map<String, String> param = new HashMap<>();
+					var param = new HashMap<String, String>();
 
-					String packageName = packageName(e);
+					var packageName = packageName(e);
 
-					String className = className(packageName, e) + SQLProxyBuilder.METADATA_CLASS_SUFFIX;
+					var className = className(packageName, e) + SQLProxyBuilder.METADATA_CLASS_SUFFIX;
 
 					param.put("PACKAGE", packageName.isEmpty() ? "" : ("package " + packageName + ";"));
 					param.put("INTERFACE", className);
 
-					String methodPart = buildMetodsPart(infos);
+					var methodPart = buildMetodsPart(infos);
 
 					template = Formatter.erase(template, methodPart.isEmpty());
 
@@ -106,9 +104,9 @@ public class SQLProxyProcessor extends AbstractProcessor {
 
 					template = Formatter.format(template, param);
 
-					String fileName = packageName.isEmpty() ? className : packageName + "." + className;
+					var fileName = packageName.isEmpty() ? className : packageName + "." + className;
 					try {
-						try (Writer writer = super.processingEnv.getFiler().createSourceFile(fileName).openWriter()) {
+						try (var writer = super.processingEnv.getFiler().createSourceFile(fileName).openWriter()) {
 							writer.write(template);
 						}
 					} catch (IOException ioe) {
@@ -130,8 +128,8 @@ public class SQLProxyProcessor extends AbstractProcessor {
 	}
 
 	private String className(String packageName, Element element) {
-		TypeElement type = element.accept(typeVisitor, null);
-		String name = type.getQualifiedName().toString();
+		var type = element.accept(typeVisitor, null);
+		var name = type.getQualifiedName().toString();
 
 		// . はインナークラスの区切りにも使用されるので、純粋にパッケージ名のみを取り除く
 		name = name.substring(packageName.length());
@@ -148,7 +146,7 @@ public class SQLProxyProcessor extends AbstractProcessor {
 	}
 
 	private static String methodPart(MethodInfo info) {
-		String args = String.join(", ", info.parameterNames.stream().map(n -> "\"" + n + "\"").collect(Collectors.toList()));
+		var args = String.join(", ", info.parameterNames.stream().map(n -> "\"" + n + "\"").collect(Collectors.toList()));
 		return "@Method(name = \"" + info.name + "\", args = {" + args + "})";
 	}
 
@@ -186,7 +184,7 @@ public class SQLProxyProcessor extends AbstractProcessor {
 
 		@Override
 		public Void visitDeclared(DeclaredType t, ExecutableElement p) {
-			TypeElement type = t.asElement().accept(typeVisitor, null);
+			var type = t.asElement().accept(typeVisitor, null);
 
 			if (sameClass(type, BResultSet.class)) return DEFAULT_VALUE;
 			if (sameClass(type, SQLProxy.ResultSet.class)) return DEFAULT_VALUE;
@@ -227,7 +225,7 @@ public class SQLProxyProcessor extends AbstractProcessor {
 
 		@Override
 		public Void visitDeclared(DeclaredType t, VariableElement p) {
-			TypeElement type = t.asElement().accept(typeVisitor, null);
+			var type = t.asElement().accept(typeVisitor, null);
 
 			if (sameClass(type, DataTypeConverter.BIG_DECIMAL_TYPE)) return DEFAULT_VALUE;
 			if (sameClass(type, DataTypeConverter.BINARY_STREAM_TYPE)) return DEFAULT_VALUE;
@@ -259,9 +257,9 @@ public class SQLProxyProcessor extends AbstractProcessor {
 
 			e.getReturnType().accept(new ReturnTypeChecker(), e);
 
-			MethodInfo info = new MethodInfo();
+			var info = new MethodInfo();
 
-			ParameterTypeChecker checker = new ParameterTypeChecker();
+			var checker = new ParameterTypeChecker();
 
 			info.name = e.getSimpleName().toString();
 			e.getParameters().forEach(parameter -> {

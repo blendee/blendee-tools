@@ -1,12 +1,74 @@
 /*--*//*@formatter:off*//*--*/package /*++[[PACKAGE]]++*//*--*/org.blendee.codegen/*--*/;
 
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.List;
-import java.util.LinkedList;
 
+import org.blendee.assist.AssistColumn;
+import org.blendee.assist.CriteriaAnyColumn;
+import org.blendee.assist.CriteriaAssistColumn;
+import org.blendee.assist.CriteriaContext;
+import org.blendee.assist.DataManipulationStatement;
+import org.blendee.assist.DataManipulationStatementBehavior;
+import org.blendee.assist.DataManipulator;
+import org.blendee.assist.DeleteStatementIntermediate;
+import org.blendee.assist.GroupByClauseAssist;
+import org.blendee.assist.GroupByColumn;
+import org.blendee.assist.GroupByOfferFunction;
+import org.blendee.assist.HavingClauseAssist;
+import org.blendee.assist.HavingColumn;
+import org.blendee.assist.Helper;
+import org.blendee.assist.InsertClauseAssist;
+import org.blendee.assist.InsertColumn;
+import org.blendee.assist.InsertOfferFunction;
+import org.blendee.assist.InsertStatementIntermediate;
+import org.blendee.assist.InstantOneToManyQuery;
+import org.blendee.assist.ListGroupByClauseAssist;
+import org.blendee.assist.ListInsertClauseAssist;
+import org.blendee.assist.ListOrderByClauseAssist;
+import org.blendee.assist.ListSelectClauseAssist;
+import org.blendee.assist.ListUpdateClauseAssist;
+/*++[[IMPORTS]]++*/
+import org.blendee.assist.LogicalOperators;
+import org.blendee.assist.OnClause;
+import org.blendee.assist.OnLeftClauseAssist;
+import org.blendee.assist.OnLeftColumn;
+import org.blendee.assist.OnRightClauseAssist;
+import org.blendee.assist.OnRightColumn;
+import org.blendee.assist.OneToManyBehavior;
+import org.blendee.assist.OneToManyQuery;
+import org.blendee.assist.OrderByClauseAssist;
+import org.blendee.assist.OrderByColumn;
+import org.blendee.assist.OrderByOfferFunction;
+import org.blendee.assist.Query;
+import org.blendee.assist.RightTable;
+import org.blendee.assist.Row;
+import org.blendee.assist.RowIterator;
+import org.blendee.assist.SQLDecorators;
+import org.blendee.assist.SelectClauseAssist;
+import org.blendee.assist.SelectColumn;
+import org.blendee.assist.SelectOfferFunction;
+import org.blendee.assist.SelectStatement;
+import org.blendee.assist.SelectStatementBehavior;
+import org.blendee.assist.SelectStatementBehavior.PlaybackQuery;
+import org.blendee.assist.Statement;
+import org.blendee.assist.TableFacade;
+import org.blendee.assist.TableFacadeAssist;
+import org.blendee.assist.TableFacadeColumn;
+import org.blendee.assist.TableFacadeContext;
+import org.blendee.assist.UpdateClauseAssist;
+import org.blendee.assist.UpdateColumn;
+import org.blendee.assist.UpdateStatementIntermediate;
+import org.blendee.assist.Vargs;
+import org.blendee.assist.WhereClauseAssist;
+import org.blendee.assist.WhereColumn;
+import org.blendee.assist.annotation.Column;
+/*--*/import org.blendee.assist.annotation.ForeignKey;
+import org.blendee.assist.annotation.PrimaryKey;/*--*/
+import org.blendee.assist.annotation.Table;
 import org.blendee.jdbc.BPreparedStatement;
 import org.blendee.jdbc.ComposedSQL;
 import org.blendee.jdbc.ContextManager;
@@ -25,73 +87,12 @@ import org.blendee.sql.MultiColumn;
 import org.blendee.sql.OrderByClause;
 import org.blendee.sql.Relationship;
 import org.blendee.sql.RelationshipFactory;
+import org.blendee.sql.RuntimeId;
+import org.blendee.sql.RuntimeIdFactory;
 import org.blendee.sql.SQLDecorator;
 import org.blendee.sql.SQLQueryBuilder;
 import org.blendee.sql.ValueExtractor;
 import org.blendee.sql.ValueExtractorsConfigure;
-import org.blendee.sql.RuntimeId;
-import org.blendee.sql.RuntimeIdFactory;
-import org.blendee.assist.CriteriaAnyColumn;
-import org.blendee.assist.AssistColumn;
-import org.blendee.assist.CriteriaAssistColumn;
-import org.blendee.assist.CriteriaContext;
-import org.blendee.assist.DataManipulationStatement;
-import org.blendee.assist.DataManipulationStatementBehavior;
-import org.blendee.assist.DataManipulator;
-import org.blendee.assist.DeleteStatementIntermediate;
-import org.blendee.assist.GroupByColumn;
-import org.blendee.assist.GroupByOfferFunction;
-import org.blendee.assist.GroupByClauseAssist;
-import org.blendee.assist.HavingColumn;
-import org.blendee.assist.HavingClauseAssist;
-import org.blendee.assist.InsertColumn;
-import org.blendee.assist.InsertOfferFunction;
-import org.blendee.assist.InsertClauseAssist;
-import org.blendee.assist.InsertStatementIntermediate;
-import org.blendee.assist.InstantOneToManyQuery;
-/*++[[IMPORTS]]++*/
-import org.blendee.assist.LogicalOperators;
-import org.blendee.assist.OnClause;
-import org.blendee.assist.OnLeftColumn;
-import org.blendee.assist.OnLeftClauseAssist;
-import org.blendee.assist.OnRightColumn;
-import org.blendee.assist.OnRightClauseAssist;
-import org.blendee.assist.OneToManyQuery;
-import org.blendee.assist.OneToManyBehavior;
-import org.blendee.assist.OrderByColumn;
-import org.blendee.assist.OrderByOfferFunction;
-import org.blendee.assist.OrderByClauseAssist;
-import org.blendee.assist.Query;
-import org.blendee.assist.RightTable;
-import org.blendee.assist.Row;
-import org.blendee.assist.RowIterator;
-import org.blendee.assist.SelectColumn;
-import org.blendee.assist.SelectOfferFunction;
-import org.blendee.assist.SelectClauseAssist;
-import org.blendee.assist.Statement;
-import org.blendee.assist.SelectStatement;
-import org.blendee.assist.SelectStatementBehavior;
-import org.blendee.assist.SelectStatementBehavior.PlaybackQuery;
-import org.blendee.assist.TableFacade;
-import org.blendee.assist.TableFacadeColumn;
-import org.blendee.assist.TableFacadeContext;
-import org.blendee.assist.TableFacadeAssist;
-import org.blendee.assist.UpdateColumn;
-import org.blendee.assist.UpdateClauseAssist;
-import org.blendee.assist.UpdateStatementIntermediate;
-import org.blendee.assist.WhereColumn;
-import org.blendee.assist.WhereClauseAssist;
-import org.blendee.assist.SQLDecorators;
-import org.blendee.assist.ListSelectClauseAssist;
-import org.blendee.assist.ListGroupByClauseAssist;
-import org.blendee.assist.ListOrderByClauseAssist;
-import org.blendee.assist.ListInsertClauseAssist;
-import org.blendee.assist.ListUpdateClauseAssist;
-import org.blendee.assist.annotation.Column;
-import org.blendee.assist.Helper;
-import org.blendee.assist.Vargs;
-import org.blendee.assist.annotation.Table;
-/*--*/import org.blendee.assist.annotation.ForeignKey;import org.blendee.assist.annotation.PrimaryKey;/*--*/
 /**
  * 自動生成されたテーブル操作クラスです。
 [[TABLE_COMMENT]]
@@ -238,7 +239,7 @@ public class /*++[[TABLE]]++*//*--*/TableFacadeTemplate/*--*/
 		 * @return [[TYPE]]
 		 */
 		public /*++[[RETURN_TYPE]]++*/ /*--*/String/*--*/get/*++[[METHOD]]++*/() {
-			Binder binder = data$.getValue("[[COLUMN]]");
+			var binder = data$.getValue("[[COLUMN]]");
 			return /*++[[PREFIX]]++*//*++[[CAST]]++*//*--*/(String)/*--*/binder.getValue()/*++[[SUFFIX]]++*/;
 		}
 /*==RowPropertyAccessorPart==*//*++[[ROW_RELATIONSHIP_PART]]++*//*==RowRelationshipPart==*/
@@ -989,42 +990,42 @@ public class /*++[[TABLE]]++*//*--*/TableFacadeTemplate/*--*/
 
 	@Override
 	public Iterator retrieve() {
-		SelectBehavior selectBehavior = selectBehavior();
+		var selectBehavior = selectBehavior();
 		selectBehavior.checkRowMode();
 		return wrap(selectBehavior.query().retrieve());
 	}
 
 	@Override
 	public Optional<Row> fetch(String... primaryKeyMembers) {
-		SelectBehavior selectBehavior = selectBehavior();
+		var selectBehavior = selectBehavior();
 		selectBehavior.checkRowMode();
 		return selectBehavior.query().fetch(primaryKeyMembers).map(o -> createRow(o));
 	}
 
 	@Override
 	public Optional<Row> fetch(Number... primaryKeyMembers) {
-		SelectBehavior selectBehavior = selectBehavior();
+		var selectBehavior = selectBehavior();
 		selectBehavior.checkRowMode();
 		return selectBehavior.query().fetch(primaryKeyMembers).map(o -> createRow(o));
 	}
 
 	@Override
 	public Optional<Row> fetch(Bindable... primaryKeyMembers) {
-		SelectBehavior selectBehavior = selectBehavior();
+		var selectBehavior = selectBehavior();
 		selectBehavior.checkRowMode();
 		return selectBehavior.query().fetch(primaryKeyMembers).map(o -> createRow(o));
 	}
 
 	@Override
 	public int count() {
-		SelectBehavior selectBehavior = selectBehavior();
+		var selectBehavior = selectBehavior();
 		selectBehavior.checkRowMode();
 		return selectBehavior.query().count();
 	}
 
 	@Override
 	public ComposedSQL countSQL() {
-		SelectBehavior selectBehavior = selectBehavior();
+		var selectBehavior = selectBehavior();
 		selectBehavior.checkRowMode();
 		return selectBehavior.query().countSQL();
 	}
@@ -1529,14 +1530,14 @@ public class /*++[[TABLE]]++*//*--*/TableFacadeTemplate/*--*/
 
 		@Override
 		public WhereLogicalOperators EXISTS(SelectStatement subquery) {
-			SelectStatement statement = getSelectStatement();
+			var statement = getSelectStatement();
 			Helper.setExists(statement.getRuntimeId(), this, subquery);
 			return (WhereLogicalOperators) statement.getWhereLogicalOperators();
 		}
 
 		@Override
 		public WhereLogicalOperators NOT_EXISTS(SelectStatement subquery) {
-			SelectStatement statement = getSelectStatement();
+			var statement = getSelectStatement();
 			Helper.setNotExists(statement.getRuntimeId(), this, subquery);
 			return (WhereLogicalOperators) statement.getWhereLogicalOperators();
 		}
@@ -1560,7 +1561,7 @@ public class /*++[[TABLE]]++*//*--*/TableFacadeTemplate/*--*/
 		 */
 		@Override
 		public WhereColumn<WhereLogicalOperators> any(String template) {
-			SelectStatement statement = getSelectStatement();
+			var statement = getSelectStatement();
 			return new WhereColumn<>(
 				statement,
 				getContext(),
@@ -1574,7 +1575,7 @@ public class /*++[[TABLE]]++*//*--*/TableFacadeTemplate/*--*/
 		 */
 		@Override
 		public WhereLogicalOperators paren(Consumer<WhereAssist> consumer) {
-			SelectStatement statement = getSelectStatement();
+			var statement = getSelectStatement();
 			Helper.paren(statement.getRuntimeId(), getContext(), consumer, this);
 			return (WhereLogicalOperators) statement.getWhereLogicalOperators();
 		}
@@ -1659,14 +1660,14 @@ public class /*++[[TABLE]]++*//*--*/TableFacadeTemplate/*--*/
 
 		@Override
 		public HavingLogicalOperators EXISTS(SelectStatement subquery) {
-			SelectStatement statement = getSelectStatement();
+			var statement = getSelectStatement();
 			Helper.setExists(statement.getRuntimeId(), this, subquery);
 			return (HavingLogicalOperators) statement.getHavingLogicalOperators();
 		}
 
 		@Override
 		public HavingLogicalOperators NOT_EXISTS(SelectStatement subquery) {
-			SelectStatement statement = getSelectStatement();
+			var statement = getSelectStatement();
 			Helper.setNotExists(statement.getRuntimeId(), this, subquery);
 			return (HavingLogicalOperators) statement.getHavingLogicalOperators();
 		}
@@ -1690,7 +1691,7 @@ public class /*++[[TABLE]]++*//*--*/TableFacadeTemplate/*--*/
 		 */
 		@Override
 		public HavingColumn<HavingLogicalOperators> any(String template) {
-			SelectStatement statement = getSelectStatement();
+			var statement = getSelectStatement();
 			return new HavingColumn<>(
 				statement,
 				getContext(),
@@ -1704,7 +1705,7 @@ public class /*++[[TABLE]]++*//*--*/TableFacadeTemplate/*--*/
 		 */
 		@Override
 		public HavingLogicalOperators paren(Consumer<HavingAssist> consumer) {
-			SelectStatement statement = getSelectStatement();
+			var statement = getSelectStatement();
 			Helper.paren(statement.getRuntimeId(), getContext(), consumer, this);
 			return (HavingLogicalOperators) statement.getHavingLogicalOperators();
 		}
@@ -1784,14 +1785,14 @@ public class /*++[[TABLE]]++*//*--*/TableFacadeTemplate/*--*/
 
 		@Override
 		public OnLeftLogicalOperators EXISTS(SelectStatement subquery) {
-			SelectStatement statement = getSelectStatement();
+			var statement = getSelectStatement();
 			Helper.setExists(statement.getRuntimeId(), this, subquery);
 			return (OnLeftLogicalOperators) statement.getOnLeftLogicalOperators();
 		}
 
 		@Override
 		public OnLeftLogicalOperators NOT_EXISTS(SelectStatement subquery) {
-			SelectStatement statement = getSelectStatement();
+			var statement = getSelectStatement();
 			Helper.setNotExists(statement.getRuntimeId(), this, subquery);
 			return (OnLeftLogicalOperators) statement.getOnLeftLogicalOperators();
 		}
@@ -1815,7 +1816,7 @@ public class /*++[[TABLE]]++*//*--*/TableFacadeTemplate/*--*/
 		 */
 		@Override
 		public OnLeftColumn<OnLeftLogicalOperators> any(String template) {
-			SelectStatement statement = getSelectStatement();
+			var statement = getSelectStatement();
 			return new OnLeftColumn<>(
 				statement,
 				getContext(),
@@ -1829,7 +1830,7 @@ public class /*++[[TABLE]]++*//*--*/TableFacadeTemplate/*--*/
 		 */
 		@Override
 		public OnLeftLogicalOperators paren(Consumer<OnLeftAssist> consumer) {
-			SelectStatement statement = getSelectStatement();
+			var statement = getSelectStatement();
 			Helper.paren(statement.getRuntimeId(), getContext(), consumer, this);
 			return (OnLeftLogicalOperators) statement.getOnLeftLogicalOperators();
 		}
@@ -1875,14 +1876,14 @@ public class /*++[[TABLE]]++*//*--*/TableFacadeTemplate/*--*/
 
 		@Override
 		public OnRightLogicalOperators EXISTS(SelectStatement subquery) {
-			SelectStatement statement = getSelectStatement();
+			var statement = getSelectStatement();
 			Helper.setExists(statement.getRuntimeId(), this, subquery);
 			return (OnRightLogicalOperators) statement.getOnRightLogicalOperators();
 		}
 
 		@Override
 		public OnRightLogicalOperators NOT_EXISTS(SelectStatement subquery) {
-			SelectStatement statement = getSelectStatement();
+			var statement = getSelectStatement();
 			Helper.setNotExists(statement.getRuntimeId(), this, subquery);
 			return (OnRightLogicalOperators) statement.getOnRightLogicalOperators();
 		}
@@ -1906,7 +1907,7 @@ public class /*++[[TABLE]]++*//*--*/TableFacadeTemplate/*--*/
 		 */
 		@Override
 		public OnRightColumn<OnRightLogicalOperators> any(String template) {
-			SelectStatement statement = getSelectStatement();
+			var statement = getSelectStatement();
 			return new OnRightColumn<>(
 				statement,
 				getContext(),
@@ -1920,7 +1921,7 @@ public class /*++[[TABLE]]++*//*--*/TableFacadeTemplate/*--*/
 		 */
 		@Override
 		public OnRightLogicalOperators paren(Consumer<OnRightAssist> consumer) {
-			SelectStatement statement = getSelectStatement();
+			var statement = getSelectStatement();
 			Helper.paren(statement.getRuntimeId(), getContext(), consumer, this);
 			return (OnRightLogicalOperators) statement.getOnRightLogicalOperators();
 		}
@@ -2024,14 +2025,14 @@ public class /*++[[TABLE]]++*//*--*/TableFacadeTemplate/*--*/
 
 		@Override
 		public DMSWhereLogicalOperators EXISTS(SelectStatement subquery) {
-			DataManipulationStatement statement = getDataManipulationStatement();
+			var statement = getDataManipulationStatement();
 			Helper.setExists(statement.getRuntimeId(), this, subquery);
 			return (DMSWhereLogicalOperators) statement.getWhereLogicalOperators();
 		}
 
 		@Override
 		public DMSWhereLogicalOperators NOT_EXISTS(SelectStatement subquery) {
-			DataManipulationStatement statement = getDataManipulationStatement();
+			var statement = getDataManipulationStatement();
 			Helper.setNotExists(statement.getRuntimeId(), this, subquery);
 			return (DMSWhereLogicalOperators) statement.getWhereLogicalOperators();
 		}
@@ -2055,7 +2056,7 @@ public class /*++[[TABLE]]++*//*--*/TableFacadeTemplate/*--*/
 		 */
 		@Override
 		public WhereColumn<DMSWhereLogicalOperators> any(String template) {
-			DataManipulationStatement statement = getDataManipulationStatement();
+			var statement = getDataManipulationStatement();
 			return new WhereColumn<>(
 				statement,
 				getContext(),
@@ -2069,7 +2070,7 @@ public class /*++[[TABLE]]++*//*--*/TableFacadeTemplate/*--*/
 		 */
 		@Override
 		public DMSWhereLogicalOperators paren(Consumer<DMSWhereAssist> consumer) {
-			DataManipulationStatement statement = getDataManipulationStatement();
+			var statement = getDataManipulationStatement();
 			Helper.paren(statement.getRuntimeId(), getContext(), consumer, this);
 			return (DMSWhereLogicalOperators) statement.getWhereLogicalOperators();
 		}
